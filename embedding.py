@@ -1,8 +1,8 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
-from sklearn.cluster import KMeans
+'''from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
-from kneed import KneeLocator
+from kneed import KneeLocator'''
 
 sbert_model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
 from sklearn.feature_extraction.text import CountVectorizer
