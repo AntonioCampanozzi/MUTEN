@@ -4,6 +4,7 @@ import pm4py
 import argparse
 import df_manipulation
 import embedding
+from timestamp_embedder import TimeEmbedder
 
 parser = argparse.ArgumentParser(description='Process Discovery using DOROTHY')
 
@@ -21,9 +22,9 @@ df_group = eventlog_df.groupby("case:concept:name", sort=False)
 filtered_df = df_manipulation.filterlog(df_group, "concept:name", "org:resource")
 
 df_group = filtered_df.groupby("case:concept:name", sort=False)
-traces_df = df_manipulation.get_traces(df_group)
+time_deltas = df_manipulation.get_time_deltas(df_group)
 
-df_group = traces_df.groupby("traces", sort=False)
-variant_traces_df = df_manipulation.get_variant_traces(traces_df.groupby("traces", sort=False))
+max_sequence_length = int(time_deltas.groupby("case:concept:name").size().max())
+print("Max sequence length: ", max_sequence_length)
 
-variant_traces_embeddings = embedding.get_variants_embeddings(variant_traces_df["traces"].to_list())
+print(df_group['time:timestamp'].head(1))

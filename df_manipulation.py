@@ -62,6 +62,26 @@ def get_traces(event_log):
 
     return pd.DataFrame(activity_traces)
 
+def get_time_deltas(event_log):
+    """
+    Calcola i delta di tempo tra le attività per ogni trace nell'event log.
+    :param event_log: DataFrame dell'event log
+    :return: Event log con i delta di tempo al posto dei timestamp
+    """
+    time_deltas_log = {"case:concept:name": [], "time:timestamp": []}
+
+    for name, group in event_log:
+        timestamps = group["time:timestamp"].to_list()
+        time_deltas = [0]  # Primo evento ha delta 0
+        for i in range(1, len(timestamps)):
+            delta = (timestamps[i] - timestamps[i - 1]).total_seconds()/3600
+            time_deltas.append(delta)
+        
+        time_deltas_log["case:concept:name"].extend([name] * len(time_deltas))
+        time_deltas_log["time:timestamp"].extend(time_deltas)
+
+    return pd.DataFrame(time_deltas_log)
+
 def create_sentence(t):
      trace=config.INITIAL_SENTENCE.replace("<concept:name>", t["concept:name"].iloc[0]).replace("<org:resource>", t["org:resource"].iloc[0])
      for i in range(1, len(t)):
