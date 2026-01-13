@@ -1,6 +1,7 @@
 from sklearn.cluster import KMeans
 from sklearn.metrics import pairwise_distances
 from kneed import KneeLocator
+import numpy as np
 
 
 def run_kmeans_elbow(embeddings, k_min=2, k_max=15, random_state=42):

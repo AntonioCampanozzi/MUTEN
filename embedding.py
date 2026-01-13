@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
-from timestamp_embedder import TimeEmbedder
-
+from scipy.fftpack import dct
+from sklearn.decomposition import PCA
 
 sbert_model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
 from sklearn.feature_extraction.text import CountVectorizer
@@ -43,7 +43,9 @@ def get_sentence_embeddings(variants):
     :param variants: lista di varianti
     :return: matrice degli embeddings
     """
-    return sbert_model.encode(variants)
+    pca= PCA(n_components=128)
+    
+    return pca.fit_transform(sbert_model.encode(variants))
 
 def log_scale_time_deltas(time_deltas):
     """
@@ -54,16 +56,36 @@ def log_scale_time_deltas(time_deltas):
     """
     return np.log1p(time_deltas)
 
-def get_time_embeddings(autoencoder, time_deltas):
+def get_time_embeddings(sequences, embedding_dim=64):
     """
-    Calcola gli embeddings dei time deltas scalati logaritmicamente.
+    Calcola gli embeddings temporali utilizzando il Deterministic Cosine Transform.
 
-    :param time_deltas: array dei time deltas
-    :return: matrice degli embeddings
+    :param sequences: lista di sequenze temporali
+    :return: matrice degli embeddings temporali
     """
-    encoder = Model(
-        inputs=autoencoder.model.input,
-        outputs=autoencoder.model.layers[3].output  # Dense(128)
-        )
+    embeddings = []
+    print(len(sequences))
+    for s in sequences:
+        s = np.array(s)
+        print(f's: {s.shape}')
+        dct_coefficients = dct(s, type=2, axis=0, norm='ortho')
+        if len(dct_coefficients) < embedding_dim:
+            dct_coefficients = np.pad(dct_coefficients, (0, embedding_dim - len(dct_coefficients)), constant_values=0.0)
+        print(f'dct_coefficients: {dct_coefficients}')
+        print(f'dct_coefficients shape: {dct_coefficients.shape}')
+        embeddings.append(dct_coefficients[:embedding_dim])
+    return np.vstack(embeddings)
+
+def concat_embeddings(emb1, emb2):
+    """
+    Normalizza e concatena le due tipologie di embeddings.
+
+    :param emb1: prima matrice di embeddings
+    :param emb2: seconda matrice di embeddings
+    :return: matrice di embeddings concatenata
+    """
     
-    return encoder.predict(time_deltas)
+    print(type(emb1), emb1.shape, emb1.dtype)
+    print(type(emb2), emb2.shape, emb2.dtype)
+
+    return np.concatenate((emb1, emb2), axis=1)

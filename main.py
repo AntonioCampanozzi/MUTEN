@@ -8,6 +8,7 @@ import pm4py
 import discover
 import embedding
 import df_manipulation
+import clustering
 import metrics_util
 import argparse
 
@@ -51,33 +52,47 @@ mapping = {value: idx for idx, value in enumerate(unique_values)}
 reverse_mapping = {idx: value for value, idx in mapping.items()}
 
 # Step 3: Apply mapping
-eventlog_df = eventlog_df[["case:concept:name", "concept:name", "time:timestamp"]]
-
 df_group = eventlog_df.groupby("case:concept:name", sort=False)
-filtered_df = df_manipulation.filterlog(df_group, "concept:name")
+
+filtered_df = df_manipulation.filterlog(df_group, "concept:name", "org:resource")
 
 df_group = filtered_df.groupby("case:concept:name", sort=False)
-traces_df = df_manipulation.get_traces(df_group)
 
-df_group = traces_df.groupby("traces", sort=False)
-variant_traces_df = df_manipulation.get_variant_traces(traces_df.groupby("traces", sort=False))
+time_deltas_df = df_manipulation.get_time_deltas(df_group)
+
+time_deltas_df['time:timestamp'] = embedding.log_scale_time_deltas(time_deltas_df['time:timestamp'].values)
+
+sentence_df = df_manipulation.get_traces(time_deltas_df.groupby("case:concept:name", sort=False))
+
+variant_df=df_manipulation.get_variant_traces(sentence_df.groupby("traces", sort=False))
+
+print(variant_df.head(10))
+
+BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
+print(BERT_embedings[0].shape)
+
+print(BERT_embedings)
+
+print(variant_df.head(10))
+
+coeff= embedding.get_time_embeddings(variant_df['time:timestamp'].tolist())
+
+final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
 
 time_embedding = time.time()
-variant_traces_embeddings = embedding.get_variants_embeddings(variant_traces_df["traces"].to_list())
 
 metrics_util.add_time(time_metrics, "Tempo embedding", time.time() - time_embedding)
 start_kmeans = time.time()
-best_kmeans = embedding.run_kmeans_elbow(variant_traces_embeddings)
-variant_traces_df["cluster"] = best_kmeans.labels_
+best_kmeans = clustering.run_kmeans_elbow(final_embeddings)
+variant_df["cluster"] = best_kmeans.labels_
 metrics_util.add_time(time_metrics, "Tempo kmeans", time.time() - start_kmeans)
 
-medoids = embedding.get_medoid_df(variant_traces_df, variant_traces_embeddings, best_kmeans)
-
+medoids = clustering.get_medoid_df(variant_df, final_embeddings, best_kmeans)
 medoids.to_csv(f'{csv_path}/_{dataset}_filtered_eventlog_variant_traces_cluster.csv', index=False)
 
 metrics_util.add_time(time_metrics, "Tempo preprocessing totale", time.time() - start_pre)
 
-del best_kmeans, variant_traces_embeddings, traces_df, variant_traces_df
+del best_kmeans, final_embeddings, sentence_df, variant_df
 gc.collect()
 
 df_group = filtered_df.groupby("case:concept:name", sort=False)
