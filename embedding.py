@@ -43,7 +43,7 @@ def get_sentence_embeddings(variants):
     :param variants: lista di varianti
     :return: matrice degli embeddings
     """
-    pca= PCA(n_components=5)
+    pca= PCA(n_components=128)
     
     return pca.fit_transform(sbert_model.encode(variants))
 
