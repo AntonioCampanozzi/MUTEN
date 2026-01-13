@@ -1,8 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
-'''from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances
-from kneed import KneeLocator'''
+from scipy.fftpack import dct
+from sklearn.decomposition import PCA
 
 sbert_model = SentenceTransformer('sentence-transformers/all-roberta-large-v1')
 from sklearn.feature_extraction.text import CountVectorizer
@@ -37,77 +36,56 @@ def get_variants_embeddings_agg(variants):
     X = vectorizer.fit_transform(new_variants)
     return X.toarray()#sbert_model.encode(variants)
 
-def get_variants_embeddings(variants):
+def get_sentence_embeddings(variants):
     """
     Calcola gli embeddings delle varianti utilizzando il modello SBERT.
 
     :param variants: lista di varianti
     :return: matrice degli embeddings
     """
-    return sbert_model.encode(variants)
-
-def run_kmeans_elbow(embeddings, k_min=2, k_max=15, random_state=42):
-    """
-    Esegue il metodo dell'elbow per determinare il numero ottimale di cluster e applica il kmeans ottimale.
-
-    :param embeddings: matrice degli embeddings
-    :param k_min: numero minimo di cluster
-    :param k_max: numero massimo di cluster
-    :param random_state: seed per la riproducibilità
-    :return: modello kmeans ottimale
-    """
-    inertia_values = []
-    k_values = list(range(k_min, k_max + 1))
-
-    for k in k_values:
-        kmeans = KMeans(n_clusters=k, random_state=random_state)
-        kmeans.fit(embeddings)
-        inertia_values.append(kmeans.inertia_)
+    pca= PCA(n_components=128)
     
-    # Uso della libreria kneed per trovare il punto di "elbow"
-    knee = KneeLocator(k_values, inertia_values, curve="convex", direction="decreasing")  
-    print(f"Elbow found at k = {knee.knee}")
+    return pca.fit_transform(sbert_model.encode(variants))
 
-    best_kmeans = KMeans(n_clusters=knee.knee, random_state=random_state)
-    best_kmeans.fit(embeddings)
+def log_scale_time_deltas(time_deltas):
+    """
+    Applica una scala logaritmica ai time deltas.
+
+    :param time_deltas: array dei time deltas
+    :return: array dei time deltas scalati
+    """
+    return np.log1p(time_deltas)
+
+def get_time_embeddings(sequences, embedding_dim=64):
+    """
+    Calcola gli embeddings temporali utilizzando il Deterministic Cosine Transform.
+
+    :param sequences: lista di sequenze temporali
+    :return: matrice degli embeddings temporali
+    """
+    embeddings = []
+    print(len(sequences))
+    for s in sequences:
+        s = np.array(s)
+        print(f's: {s.shape}')
+        dct_coefficients = dct(s, type=2, axis=0, norm='ortho')
+        if len(dct_coefficients) < embedding_dim:
+            dct_coefficients = np.pad(dct_coefficients, (0, embedding_dim - len(dct_coefficients)), constant_values=0.0)
+        print(f'dct_coefficients: {dct_coefficients}')
+        print(f'dct_coefficients shape: {dct_coefficients.shape}')
+        embeddings.append(dct_coefficients[:embedding_dim])
+    return np.vstack(embeddings)
+
+def concat_embeddings(emb1, emb2):
+    """
+    Normalizza e concatena le due tipologie di embeddings.
+
+    :param emb1: prima matrice di embeddings
+    :param emb2: seconda matrice di embeddings
+    :return: matrice di embeddings concatenata
+    """
     
-    return best_kmeans
+    print(type(emb1), emb1.shape, emb1.dtype)
+    print(type(emb2), emb2.shape, emb2.dtype)
 
-def compute_medoid(cluster_embeddings):
-    """
-    Calcola il medoid di un cluster dato un insieme di embeddings.
-
-    :param cluster_embeddings: matrice degli embeddings del cluster
-    :return: indice del medoid
-    """
-    distancematrix = pairwise_distances(cluster_embeddings, metric='cosine')
-    total_distances = np.sum(distancematrix, axis=1)
-  
-    return np.argmin(total_distances)
-
-def get_medoid_df(df, variants_embeddings, kmeans):
-    """
-    Calcola i medoid globali per ogni cluster e crea un nuovo dataframe con le frequenze totali.
-    
-    :param df: dataframe delle varianti
-    :param variants_embeddings: matrice degli embeddings delle varianti
-    :param kmeans: modello kmeans applicato
-    :return: dataframe con i medoid globali e le frequenze totali
-    """
-    medoid_indexes = []
-    frequcies = []
-
-    for cluster in range(kmeans.n_clusters):
-        indexes = np.where(kmeans.labels_ == cluster)[0] # np.where restitusce una tupla il cui elemento [0] è l'array di indici
-        cluster_embeddings = variants_embeddings[indexes] # recupera embeddings del cluster alle posizoni degli indici
-        medoid_local_index = compute_medoid(cluster_embeddings)  # calcola il medoid locale del cluster
-        medoid_global_index = indexes[medoid_local_index]  # recupera l'indice globale del medoid locale
-        medoid_indexes.append(medoid_global_index) # aggiungi l'indice globale alla lista dei medoid
-        frequcies.append(np.sum(df["frequency"].iloc[indexes])) # calcola la frequenza totale del cluster e aggiungila alla lista delle frequenze
-    
-
-    df_medoid = df.copy()
-    df_medoid = df_medoid.iloc[medoid_indexes] # crea un nuovo dataframe con i medoid globali
-    df_medoid["frequency"] = frequcies # aggiungi la frequenza totale al dataframe dei medoid
-
-    return df_medoid
+    return np.concatenate((emb1, emb2), axis=1)

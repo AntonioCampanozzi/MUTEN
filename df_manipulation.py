@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 import config
+import embedding
 
 def reduce_consecutive_duplicates(actlst, timelst, reslst):
     """
@@ -40,11 +41,12 @@ def filterlog(event_log, activity_column, resource_column):
     filtered_log = {"case:concept:name":[],"concept:name":[], "org:resource":[],"time:timestamp":[]}
 
     for name, group in event_log:
-        new_val, timestamps, resources = reduce_consecutive_duplicates(group[activity_column].to_list(), group["time:timestamp"].to_list(), group[resource_column].to_list())
-        filtered_log["case:concept:name"].extend([name]*len(new_val))
-        filtered_log["concept:name"].extend(new_val)
-        filtered_log['time:timestamp'].extend(timestamps)
-        filtered_log['org:resource'].extend(resources)
+        if len(group) > 1: #non considero le tracce di lunghezza 1
+            new_val, timestamps, resources = reduce_consecutive_duplicates(group[activity_column].to_list(), group["time:timestamp"].to_list(), group[resource_column].to_list())
+            filtered_log["case:concept:name"].extend([name]*len(new_val))
+            filtered_log["concept:name"].extend(new_val)
+            filtered_log['time:timestamp'].extend(timestamps)
+            filtered_log['org:resource'].extend(resources)
     return pd.DataFrame(filtered_log)
 
 def get_traces(event_log):
@@ -53,14 +55,32 @@ def get_traces(event_log):
     :param event_log: DataFrame dell'event log
     :return: DataFrame contenente le tracce
     """
-    activity_traces = {"case:concept:name": [], "traces": []}
+    activity_traces = {"case:concept:name": [], "traces": [], "time:timestamp": []}
     
     for name, group in event_log:
         trace = create_sentence(group)
         activity_traces["case:concept:name"].append(name)
         activity_traces["traces"].append(trace)
-
+        activity_traces["time:timestamp"].append(group["time:timestamp"].tolist())
     return pd.DataFrame(activity_traces)
+
+def get_time_deltas(event_log):
+    """
+    Calcola i delta di tempo tra le attività per ogni trace nell'event log.
+    :param event_log: DataFrame dell'event log
+    :return: Event log con i delta di tempo al posto dei timestamp
+    """
+    
+    delta_log={"case:concept:name":[],"concept:name":[], "org:resource":[], "time:timestamp":[]}
+    
+    for name, group in event_log:
+        deltas=group['time:timestamp'].diff().dt.total_seconds().fillna(0)/3600
+        delta_log["case:concept:name"].extend([name]*len(group))
+        delta_log["concept:name"].extend(group["concept:name"])
+        delta_log["org:resource"].extend(group["org:resource"])
+        delta_log["time:timestamp"].extend(deltas)
+    
+    return pd.DataFrame(delta_log)
 
 def create_sentence(t):
      trace=config.INITIAL_SENTENCE.replace("<concept:name>", t["concept:name"].iloc[0]).replace("<org:resource>", t["org:resource"].iloc[0])
@@ -75,12 +95,13 @@ def get_variant_traces(event_log):
     :param event_log: DataFrame dell'event log
     :return: DataFrame contenente le tracce e la loro frequenza
     """
-    activity_traces = {"case:concept:name": [], "traces": [], "frequency": []}
+    activity_traces = {"case:concept:name": [], "traces": [], "time:timestamp": [], "frequency": []}
     
     for name, group in event_log:
         activity_traces["traces"].append(name)
         activity_traces["frequency"].append(len(group))
         activity_traces["case:concept:name"].append(group["case:concept:name"].iloc[0])
+        activity_traces["time:timestamp"].append(group["time:timestamp"].iloc[0])
 
     return pd.DataFrame(activity_traces)
 
