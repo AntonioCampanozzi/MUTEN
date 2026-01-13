@@ -43,7 +43,7 @@ def get_sentence_embeddings(variants):
     :param variants: lista di varianti
     :return: matrice degli embeddings
     """
-    pca= PCA(n_components=128)
+    pca= PCA(n_components=5)
     
     return pca.fit_transform(sbert_model.encode(variants))
 
@@ -64,15 +64,11 @@ def get_time_embeddings(sequences, embedding_dim=64):
     :return: matrice degli embeddings temporali
     """
     embeddings = []
-    print(len(sequences))
     for s in sequences:
         s = np.array(s)
-        print(f's: {s.shape}')
         dct_coefficients = dct(s, type=2, axis=0, norm='ortho')
         if len(dct_coefficients) < embedding_dim:
             dct_coefficients = np.pad(dct_coefficients, (0, embedding_dim - len(dct_coefficients)), constant_values=0.0)
-        print(f'dct_coefficients: {dct_coefficients}')
-        print(f'dct_coefficients shape: {dct_coefficients.shape}')
         embeddings.append(dct_coefficients[:embedding_dim])
     return np.vstack(embeddings)
 
@@ -84,6 +80,9 @@ def concat_embeddings(emb1, emb2):
     :param emb2: seconda matrice di embeddings
     :return: matrice di embeddings concatenata
     """
+    
+    emb1=emb1/np.linalg.norm(emb1, axis=1, keepdims=True)
+    emb2=emb2/(np.linalg.norm(emb2, axis=1, keepdims=True)+1e-10)
     
     print(type(emb1), emb1.shape, emb1.dtype)
     print(type(emb2), emb2.shape, emb2.dtype)
