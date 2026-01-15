@@ -67,33 +67,28 @@ sentence_df = df_manipulation.get_traces(time_deltas_df.groupby("case:concept:na
 
 variant_df=df_manipulation.get_variant_traces(sentence_df.groupby("traces", sort=False))
 
-print(variant_df.head(10))
+#BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
 
-BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
-print(BERT_embedings[0].shape)
-
-print(BERT_embedings)
-
-print(variant_df.head(10))
 
 coeff= embedding.get_time_embeddings(variant_df['time:timestamp'].tolist())
 
-final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
+
+#final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
 
 time_embedding = time.time()
 
 metrics_util.add_time(time_metrics, "Tempo embedding", time.time() - time_embedding)
 start_kmeans = time.time()
-best_kmeans = clustering.run_kmeans_elbow(final_embeddings)
+best_kmeans = clustering.run_kmeans_elbow(coeff)
 variant_df["cluster"] = best_kmeans.labels_
 metrics_util.add_time(time_metrics, "Tempo kmeans", time.time() - start_kmeans)
 
-medoids = clustering.get_medoid_df(variant_df, final_embeddings, best_kmeans)
+medoids = clustering.get_medoid_df(variant_df, coeff, best_kmeans)
 medoids.to_csv(f'{csv_path}/_{dataset}_filtered_eventlog_variant_traces_cluster.csv', index=False)
 
 metrics_util.add_time(time_metrics, "Tempo preprocessing totale", time.time() - start_pre)
 
-del best_kmeans, final_embeddings, sentence_df, variant_df
+del best_kmeans, coeff, sentence_df, variant_df
 gc.collect()
 
 df_group = filtered_df.groupby("case:concept:name", sort=False)
@@ -156,7 +151,7 @@ while improving:
     del iterative_metrics, local_best_net, local_best_im, local_best_fm
     gc.collect()
 
-#discover.visualize_process_model(best_net, best_im, best_fm, img_name=f"{dataset}_{algorithm}_best_subset_00", dir=img_path)
+discover.visualize_process_model(best_net, best_im, best_fm, img_name=f"{dataset}_{algorithm}_best_subset_00", dir=img_path)
 
 # salvataggio del sottoinsieme di medoid con il miglior f1
 medoid_subset = medoids.iloc[best_f1_pos]
