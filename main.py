@@ -67,23 +67,23 @@ sentence_df = df_manipulation.get_traces(time_deltas_df.groupby("case:concept:na
 
 variant_df=df_manipulation.get_variant_traces(sentence_df.groupby("traces", sort=False))
 
-#BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
+BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
 
 
 coeff= embedding.get_time_embeddings(variant_df['time:timestamp'].tolist())
 
 
-#final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
+final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
 
 time_embedding = time.time()
 
 metrics_util.add_time(time_metrics, "Tempo embedding", time.time() - time_embedding)
 start_kmeans = time.time()
-best_kmeans = clustering.run_kmeans_elbow(coeff)
+best_kmeans = clustering.run_kmeans_elbow(final_embeddings)
 variant_df["cluster"] = best_kmeans.labels_
 metrics_util.add_time(time_metrics, "Tempo kmeans", time.time() - start_kmeans)
 
-medoids = clustering.get_medoid_df(variant_df, coeff, best_kmeans)
+medoids = clustering.get_medoid_df(variant_df, final_embeddings, best_kmeans)
 medoids.to_csv(f'{csv_path}/_{dataset}_filtered_eventlog_variant_traces_cluster.csv', index=False)
 
 metrics_util.add_time(time_metrics, "Tempo preprocessing totale", time.time() - start_pre)

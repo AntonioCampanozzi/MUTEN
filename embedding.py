@@ -43,7 +43,7 @@ def get_sentence_embeddings(variants):
     :param variants: lista di varianti
     :return: matrice degli embeddings
     """
-    pca= PCA(n_components=5)
+    pca= PCA(n_components=128)
     
     return pca.fit_transform(sbert_model.encode(variants))
 
@@ -89,7 +89,7 @@ def concat_embeddings(emb1, emb2):
     :return: matrice di embeddings concatenata
     """
     
-    #emb1=emb1/np.linalg.norm(emb1, axis=1, keepdims=True)
+    emb1=emb1/np.linalg.norm(emb1, axis=1, keepdims=True) # normalizzazione L2
     
     print(type(emb1), emb1.shape, emb1.dtype)
     print(type(emb2), emb2.shape, emb2.dtype)
