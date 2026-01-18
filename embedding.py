@@ -56,25 +56,29 @@ def log_scale_time_deltas(time_deltas):
     """
     return np.log1p(time_deltas)
 
-def get_time_embeddings(sequences, embedding_dim=64):
+def get_time_embeddings(sequences, percentile=95):
     """
     Calcola gli embeddings temporali utilizzando il Deterministic Cosine Transform.
 
     :param sequences: lista di sequenze temporali
+    :param percentile: percentile per la selezione della dimensione dell'embedding
     :return: matrice degli embeddings temporali
     """
+    lengths = np.array([len(seq) for seq in sequences])
+    embedding_dim = int(np.percentile(lengths, percentile))
+    print(embedding_dim)
     embeddings = []
-    print(len(sequences))
+    pca= PCA(n_components=4)
     for s in sequences:
         s = np.array(s)
-        print(f's: {s.shape}')
         dct_coefficients = dct(s, type=2, axis=0, norm='ortho')
         if len(dct_coefficients) < embedding_dim:
             dct_coefficients = np.pad(dct_coefficients, (0, embedding_dim - len(dct_coefficients)), constant_values=0.0)
-        print(f'dct_coefficients: {dct_coefficients}')
-        print(f'dct_coefficients shape: {dct_coefficients.shape}')
-        embeddings.append(dct_coefficients[:embedding_dim])
-    return np.vstack(embeddings)
+        else:
+            dct_coefficients = dct_coefficients[:embedding_dim]
+        print(dct_coefficients.shape)
+        embeddings.append(dct_coefficients)
+    return pca.fit_transform(np.vstack(embeddings))
 
 def concat_embeddings(emb1, emb2):
     """
@@ -84,6 +88,8 @@ def concat_embeddings(emb1, emb2):
     :param emb2: seconda matrice di embeddings
     :return: matrice di embeddings concatenata
     """
+    
+    emb1=emb1/np.linalg.norm(emb1, axis=1, keepdims=True) # normalizzazione L2
     
     print(type(emb1), emb1.shape, emb1.dtype)
     print(type(emb2), emb2.shape, emb2.dtype)

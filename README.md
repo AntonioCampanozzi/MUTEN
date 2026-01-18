@@ -1,31 +1,30 @@
-# Leveraging a foundation deep neural embedding in process discovery under not-Pareto distribution
+# MUTEN: MUltiview Trace ENcodings
 
-**The repository contains code referred to the work:**
+This repository is a fork of the code associated with the work  
+[*DOROTHY*](https://ieeexplore.ieee.org/document/11220731), which addresses the problem of extracting excessively complex process models from non-Pareto event logs—a phenomenon known as **spaghetti-like process models**.
 
-*Vincenzo Pasquadibisceglie, Annalisa Appice, Giovanni Discanno, Donato Malerba*
+This type of event log is characterized by very high variance, and the extracted Petri nets tend to exhibit structures that are difficult to interpret. As a result, they fail to meet their primary objective: providing a concise and intuitive representation of a large set of process instances.
 
-[*Leveraging a foundation deep neural embedding in process discovery under not-Pareto distribution*](https://ieeexplore.ieee.org/document/11220731)
+## Background
 
-Please cite our work if you find it useful for your research and work.
+**MUTEN** explores one of the future research directions outlined in *DOROTHY*, namely the integration of **additional views** into the extraction of representative traces.
 
-```
-@INPROCEEDINGS{11220731,
-  author={Pasquadibisceglie, Vincenzo and Appice, Annalisa and Discanno, Giovanni and Malerba, Donato},
-  booktitle={2025 7th International Conference on Process Mining (ICPM)}, 
-  title={Leveraging a foundation deep neural embedding in process discovery under not-Pareto distribution}, 
-  year={2025},
-  volume={},
-  number={},
-  pages={1-8},
-  keywords={Process mining;Accuracy;Liquids;Noise;Process control;Sepsis;Recording;Mirrors;Standards;Monitoring;Process discovery;Trace deep embedding;Trace extraction strategy;Trace clustering;Pareto principle},
-  doi={10.1109/ICPM66919.2025.11220731}}
-```
+In traditional process discovery, the focus is generally limited to the **control-flow perspective**, while other available information is often ignored. This is because process models have historically been designed to describe only the sequence of executed activities.
+
+## Research Objective
+
+The research goal of **MUTEN** is to analyze how the extraction of process models changes when also incorporating:
+
+- **Resource-related information**
+- **Temporal characteristics of traces**
+
+By enriching the discovery process with these additional dimensions, MUTEN aims to improve the expressiveness and interpretability of the resulting process models.
 
 # How to use
-Process Discovery using DOROTHY
+Process Discovery using **MUTEN**
 - event_log: event log name
 - miner: ILP miner (ilp), Inductive Miner (im) or Split Miner (sm)
 
 ```
-python -m main.py -event_log sepsis -miner im
+python -m main.py -event_log production -miner im
 ```

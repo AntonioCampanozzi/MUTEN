@@ -1,3 +1,4 @@
+
 import os
 import time
 import numpy as np
@@ -66,16 +67,11 @@ sentence_df = df_manipulation.get_traces(time_deltas_df.groupby("case:concept:na
 
 variant_df=df_manipulation.get_variant_traces(sentence_df.groupby("traces", sort=False))
 
-print(variant_df.head(10))
-
 BERT_embedings = embedding.get_sentence_embeddings(variant_df['traces'].tolist())
-print(BERT_embedings[0].shape)
 
-print(BERT_embedings)
-
-print(variant_df.head(10))
 
 coeff= embedding.get_time_embeddings(variant_df['time:timestamp'].tolist())
+
 
 final_embeddings = embedding.concat_embeddings(BERT_embedings, coeff)
 
@@ -92,7 +88,7 @@ medoids.to_csv(f'{csv_path}/_{dataset}_filtered_eventlog_variant_traces_cluster.
 
 metrics_util.add_time(time_metrics, "Tempo preprocessing totale", time.time() - start_pre)
 
-del best_kmeans, final_embeddings, sentence_df, variant_df
+del best_kmeans, coeff, sentence_df, variant_df
 gc.collect()
 
 df_group = filtered_df.groupby("case:concept:name", sort=False)
